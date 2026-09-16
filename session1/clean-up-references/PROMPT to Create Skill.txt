@@ -1,0 +1,23 @@
+I would like your help authoring a SKILL.md, skill, that can help me work with my Word files to improve the references in the citation.  Please ask me any questions that you may have as we work together on writing the skill.
+
+First I would like the skill to perform multiple passes of the document.  Let's make each of them a goal.  For each of these passes, I would like for it to only change the reference citations and the references section of the document, do not change the actual text of the document.  Here are each of the tasks that I would like for the skill to do (as Goals):
+
+G01: First go through the document and convert the references into Cross-Reference style references so that when the reference is in the document, it links to the citation in the References section.  They should be connected like a normal cross refence using the number form in the citation.  For example the citation should be [1], [2].  That citation would be citing sources both [1] and the [2] citations.  Please double check that the numbering is all correct and that the citations references are all correct before moving on.
+
+G02: Next I would like you to format each of the citations using the ACM style formatting.  Please double check that this only changes the references section and not the text in the document.
+
+G03: Now I would like you to alphabetize my refences, so that they are in alphabetical order.  Please make sure that all of the citations in the document are still pointing at the right source.  This will probably result in renumbering the citations, so please take care to make sure that each citation is complete.
+
+G04: Now I would like for you to validate each of the reference.  Make sure that I am using a correct reference and that the work actually exists.
+
+G05: I would like for you to double check that the alphabetical order it still correct.  Please correct it if it has changed.
+
+G06: Now I would like for you to find a URL for each reference.  I know that it may not be in the reference itself, but I would like to make sure that each and every document cited has a URL to the reference.  Please add the URL to end of each reference.
+
+G07: I would like for you to double check and validate each of the URLs.
+
+G08: All of the previous goals have changed the document and in general the references should now be clean in the document with only the references and citations changed.  Can you double check that for me.
+
+G09: Please provide me with an updated document in Word form and an updated BibTex.md file for the references.
+
+G10: Lastly, please do a search of the literature in the context of my paper and identify 3-4 different references or citations that I might consider adding.  Do not actually add them to the document, but let me know about them in case I might want to review them and add them to the paper.  You might go ahead and identify the sentence or paragraph that you recommend that I add them.
