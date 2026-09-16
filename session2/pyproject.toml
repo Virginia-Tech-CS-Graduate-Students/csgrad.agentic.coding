@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "local-transcript"
+version = "0.1.0"
+description = "A local audio and video transcription workspace"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi", "uvicorn", "faster-whisper", "av", "numpy", "psutil",
+]
+
+[project.scripts]
+source-to-transcript = "source_to_transcript.cli:main"
+
+[tool.setuptools]
+packages = ["server", "source_to_transcript"]
+package-dir = {source_to_transcript = "source-to-transcript/source_to_transcript"}
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: real model and media tests (opt in)"]

@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+faster-whisper
+av
+numpy
+psutil
+pytest
+httpx
+setuptools
+wheel
