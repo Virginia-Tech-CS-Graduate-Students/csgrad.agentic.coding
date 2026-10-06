@@ -1,0 +1,18 @@
+# Local credentials, including environment variants and backup copies.
+.env*
+# This template must contain placeholders only.
+!.env.example
+
+# Local environments, runtime state, caches, and generated artifacts.
+.venv/
+.runtime/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+src/**/.staging/
+src/**/revisions/
+src/**/current.json

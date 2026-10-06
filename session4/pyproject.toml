@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "four-agent-workbench"
+version = "0.1.0"
+description = "A local, cancellable, prompt-defined four-agent development workbench"
+requires-python = ">=3.12"
+dependencies = [
+  "langgraph==1.2.12",
+  "PySide6-Essentials==6.11.2",
+  "httpx>=0.28,<1",
+  "pydantic>=2.11,<3",
+  "python-dotenv>=1,<2",
+  "packaging>=24",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10", "pytest-asyncio>=1,<2", "pytest-qt>=4,<5", "ruff>=0.12"]
+
+[project.scripts]
+four-agent-workbench = "four_agent_workbench.app:main"
+
+[tool.setuptools.packages.find]
+where = ["framework"]
+
+[tool.pytest.ini_options]
+testpaths = ["framework_tests"]
+asyncio_mode = "auto"
+markers = ["docker: requires a usable Docker daemon and the runner image"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]

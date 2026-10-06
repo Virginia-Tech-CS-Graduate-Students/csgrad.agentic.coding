@@ -1,0 +1,106 @@
+schema_version = 1
+vision_path = "prompts/vision.md"
+
+[model]
+adapter = "openai_chat"
+endpoint_kind = "full_url"
+endpoint_env = "LLM_ENDPOINT_URL"
+api_key_env = "LLM_API_KEY"
+model_env = "LLM_MODEL"
+streaming = "auto"
+connect_timeout_seconds = 10
+first_token_timeout_seconds = 60
+stream_idle_timeout_seconds = 30
+response_timeout_seconds = 180
+request_timeout_seconds = 240
+retries = 2
+
+[agents.system_engineer]
+display_name = "System Engineer"
+prompt_path = "prompts/system_engineer.md"
+output_dir = "src/requirements"
+
+[agents.software_engineer]
+display_name = "Software Engineer"
+prompt_path = "prompts/software_engineer.md"
+output_dir = "src/product"
+# [agents.software_engineer.model]
+# model_env = "SWE_LLM_MODEL"
+# endpoint_env = "SWE_LLM_ENDPOINT_URL"
+# api_key_env = "SWE_LLM_API_KEY"
+
+[agents.tester]
+display_name = "Tester"
+prompt_path = "prompts/tester.md"
+output_dir = "src/tests"
+
+[agents.marketing]
+display_name = "Marketing"
+prompt_path = "prompts/marketing.md"
+output_dir = "src/ads"
+
+[workflow]
+steps = [
+  { id = "requirements", agent = "system_engineer", activity = "define_requirements", after = [], contract = "requirements_v1" },
+  { id = "develop", agent = "software_engineer", activity = "develop", after = ["requirements"], contract = "implementation_v1" },
+  { id = "prepare_tests", agent = "tester", activity = "prepare_tests", after = ["requirements"], contract = "test_plan_v1" },
+  { id = "execute_tests", agent = "tester", activity = "execute_tests", after = ["develop", "prepare_tests"], contract = "test_results_v1" },
+  { id = "marketing", agent = "marketing", activity = "final_synthesis", after = ["requirements", "develop", "execute_tests"], contract = "marketing_v1" },
+]
+deliveries = [
+  { from_step = "requirements", port = "requirements", to = ["software_engineer", "tester", "marketing"] },
+  { from_step = "develop", port = "implementation", to = ["tester", "marketing"] },
+  { from_step = "prepare_tests", port = "test_plan", to = ["marketing"] },
+  { from_step = "execute_tests", port = "test_results", to = ["marketing"] },
+]
+
+[workflow.inputs.requirements]
+requirements_baseline = "previous.requirements"
+implementation = "previous.product"
+feedback = "previous.test_results"
+
+[workflow.inputs.develop]
+requirements = "current.requirements"
+product_baseline = "previous.product"
+feedback = "previous.test_results"
+
+[workflow.inputs.prepare_tests]
+requirements = "current.requirements"
+test_baseline = "previous.tests"
+
+[workflow.inputs.execute_tests]
+requirements = "current.requirements"
+product = "current.develop"
+prepared_tests = "current.prepare_tests"
+
+[workflow.inputs.marketing]
+requirements = "current.requirements"
+implementation = "current.develop"
+test_plan = "current.prepare_tests"
+test_results = "current.execute_tests"
+
+[execution]
+runner = "docker"
+product_language = "python"
+test_runner = "pytest"
+image = "four-agent-runner:0.1"
+dependency_policy = "agent_selected_wheels"
+package_index = "https://pypi.org/simple"
+max_concurrent_model_requests = 2
+max_model_turns = 8
+max_tool_calls = 24
+invocation_timeout_seconds = 900
+test_timeout_seconds = 120
+dependency_timeout_seconds = 300
+max_test_executions = 2
+context_char_budget = 48000
+cpus = 2
+memory_mb = 1024
+pids_limit = 128
+cycle_pause_seconds = 0.5
+
+[artifacts]
+retain_cycles = 10
+max_file_bytes = 1048576
+max_revision_bytes = 20971520
+max_files = 200
