@@ -4,6 +4,16 @@ A local Python desktop application for a prompt-defined software team: System En
 
 Each cycle defines requirements, develops software and prepares tests concurrently, executes the tests, and produces an evidence-based feature brief. Later cycles refine the accepted product using prior test feedback. Stop cancels local work immediately and prevents late artifact acceptance.
 
+## Session board
+
+![Session 4 Sage board showing the agent architecture discussion, planning prompt, and Four-Agent Workbench](session4.png)
+
+Open the image for a larger view. The presentation materials are also available in [Sage](https://sage3.cs.vt.edu/), under **VT Server → Agentic Coding Board → Session 4**.
+
+## Workbench preview
+
+![Four-Agent Workbench showing the four roles, their handoffs, and live activity previews](Agents.png)
+
 ## Install and launch
 
 Use Python 3.12 or newer. The desktop uses PySide6 Essentials; Node.js and a local web server are not needed. See [Windows setup](docs/windows.md) or [Linux setup](docs/linux.md) for platform details.

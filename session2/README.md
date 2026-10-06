@@ -2,6 +2,12 @@
 
 Local Transcript converts English MP3 and MP4 recordings into timestamped text. React provides the interface; a Python service runs the speech model on your computer. Recordings and transcripts stay in a local library until you delete them.
 
+## Session board
+
+![Session 2 Sage board showing project ideas, Bot Battle Arena materials, and the Local Transcript application](session2.png)
+
+Open the image for a larger view. The presentation materials are also available in [Sage](https://sage3.cs.vt.edu/), under **VT Server → Agentic Coding Board → Session 2**.
+
 ## Run the app
 
 Install **Python 3.14, 64-bit**, with the Windows Python launcher, and **Node.js 22.12 or later**. Microsoft Edge is used for browser tests. A separate FFmpeg installation is not required.
