@@ -144,7 +144,19 @@ class RunController:
             else:
                 resolved = resolve_models(self.root, self.settings)
                 models = {
-                    role: ChatModel(value, self.settings.model, self.redactor, semaphore)
+                    role: ChatModel(
+                        value,
+                        self.settings.model,
+                        self.redactor,
+                        semaphore,
+                        output_mode=lambda payload, role=role: self.bus.emit(
+                            "model.output_mode",
+                            run_id=self.run_id,
+                            cycle_id=self.cycle_id,
+                            agent_id=role,
+                            payload=payload,
+                        ),
+                    )
                     for role, value in resolved.items()
                 }
             clients = list(models.values())

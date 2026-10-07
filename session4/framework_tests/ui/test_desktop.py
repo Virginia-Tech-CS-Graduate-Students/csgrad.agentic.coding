@@ -1,4 +1,5 @@
 import time
+from concurrent.futures import Future
 
 import pytest
 from four_agent_workbench.domain import Event
@@ -136,3 +137,99 @@ def test_disk_failure_shows_terminal_error_and_releases_controls(window, qtbot, 
     assert window.controller.status == "failed"
     assert "disk space" in window.status_label.text()
     assert window.single_button.isEnabled()
+
+
+def send_event(window, kind, *, agent="", invocation="", status="", payload=None):
+    window.handle_event(
+        Event(
+            type=kind,
+            run_id="run",
+            cycle_id="cycle",
+            agent_id=agent,
+            invocation_id=invocation,
+            status=status,
+            payload=payload or {},
+        )
+    )
+
+
+def test_failed_agent_and_blocked_peers_survive_terminal_events_and_future_fallback(window):
+    window._run_id, window._cycle_id = "run", "cycle"
+    window.graph.begin_cycle(1)
+    send_event(window, "invocation.started", agent="system_engineer", status="running")
+    send_event(
+        window,
+        "invocation.failed",
+        agent="system_engineer",
+        status="failed",
+        payload={"error": "System Engineer: schema validation failed"},
+    )
+    for _ in range(2):
+        send_event(window, "cycle.terminated", status="failed")
+        send_event(
+            window,
+            "run.terminated",
+            status="failed",
+            payload={"completed": 0, "error": "System Engineer: schema validation failed"},
+        )
+    send_event(window, "invocation.cancelled", agent="system_engineer", status="cancelled")
+    window.controller.status = "failed"
+    window.future = Future()
+    window.future.set_result(
+        {"status": "failed", "error": "System Engineer: schema validation failed"}
+    )
+    window.tick()
+    assert window.graph.nodes["system_engineer"].status == "failed"
+    for role in ("software_engineer", "tester", "marketing"):
+        assert window.graph.nodes[role].status == "blocked"
+        assert window.graph.nodes[role].activity == "Remaining work stopped"
+    assert "System Engineer" in window.status_label.text()
+    assert not any(proxy.isVisible() for _, proxy in window.graph.previews.values())
+
+
+def test_prepared_tester_is_blocked_and_completed_requirements_are_preserved(window):
+    window._run_id, window._cycle_id = "run", "cycle"
+    window.graph.begin_cycle(1)
+    send_event(window, "invocation.completed", agent="system_engineer", status="completed")
+    send_event(
+        window,
+        "invocation.completed",
+        agent="tester",
+        status="completed",
+        invocation="cycle-prepare_tests",
+    )
+    send_event(window, "invocation.failed", agent="software_engineer", status="failed")
+    send_event(window, "cycle.terminated", status="failed")
+    send_event(window, "invocation.cancelled", agent="system_engineer", status="cancelled")
+    assert window.graph.nodes["system_engineer"].status == "completed"
+    assert window.graph.nodes["software_engineer"].status == "failed"
+    assert window.graph.nodes["tester"].status == "blocked"
+    assert window.graph.nodes["marketing"].status == "blocked"
+
+
+@pytest.mark.parametrize("cancel_event", [True, False])
+def test_concurrent_work_is_cancelled_when_another_agent_fails(window, cancel_event):
+    window._run_id, window._cycle_id = "run", "cycle"
+    window.graph.begin_cycle(1)
+    send_event(window, "invocation.completed", agent="system_engineer", status="completed")
+    send_event(window, "invocation.started", agent="tester", status="running")
+    send_event(window, "invocation.failed", agent="software_engineer", status="failed")
+    if cancel_event:
+        send_event(window, "invocation.cancelled", agent="tester", status="cancelled")
+    send_event(window, "cycle.terminated", status="failed")
+    assert window.graph.nodes["tester"].status == "cancelled"
+    assert window.graph.nodes["software_engineer"].status == "failed"
+    assert window.graph.nodes["marketing"].status == "blocked"
+
+
+@pytest.mark.parametrize("status", ["cancelled", "cleanup_blocked"])
+def test_cancellation_terminal_paths_agree(window, status):
+    window.graph.begin_cycle(1)
+    window.graph.set_status("system_engineer", "failed")
+    window.graph.set_status("tester", "running")
+    window.graph.terminate_waiting(status)
+    assert window.graph.nodes["system_engineer"].status == "failed"
+    assert all(
+        window.graph.nodes[role].status == "cancelled"
+        for role in ("software_engineer", "tester", "marketing")
+    )

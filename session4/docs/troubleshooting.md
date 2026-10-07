@@ -12,7 +12,29 @@ The service must expose compatible Chat Completions with Bearer authentication. 
 
 Authentication errors do not retry. Suitable transient failures retry twice within the total request deadline. Stop interrupts retry waits. Streaming incompatibility can fall back to a full response; malformed JSON receives one correction attempt before failure. Native provider structured-output support is not required.
 
+JSON output is requested by default through `model.json_output="auto"`. Open **Details** and inspect `model.output_mode` to see whether requests use `json_object` or text, and why. An explicit rejection of JSON mode triggers a visible text fallback; unrelated errors do not. Use `"on"` to require JSON support or `"off"` to omit the option. A successful JSON-mode request still needs local schema validation, since a provider can ignore the option or return structurally incorrect content. Offline tests verify handling; support by your configured live model must be confirmed in an actual run.
+
+## Invalid model responses and Failed agents
+
+When a response still fails validation after one correction, the status names the responsible role and the validation problem. Open **Details** and find `invocation.response_rejected` for that run and agent. Each event distinguishes JSON syntax from action-schema errors, includes error locations and a bounded redacted excerpt, and reports whether the excerpt was truncated. A syntax error may indicate invalid escaping; a schema error may identify an unsupported tool or an incorrect `finish` field. Historical failures created before these diagnostics were added have only the older generic error.
+
+Syntax excerpts now show the area around the error instead of losing the middle of long responses. `position` is relative to normalized JSON after removing outer whitespace and a permitted code fence; `excerpt_error_offset` points into the redacted excerpt. Missing commas and extra braces are rejected, never guessed or partially executed. The correction asks for smaller output, preferably one file write per response.
+
+For invalid requirements content, inspect `invocation.artifact_rejected`. For example, `path: "requirements.json"`, `loc: ["scope"]`, and `type: "string_type"` mean the scope must be text, even when an in-scope/out-of-scope object seems natural. The generated schema and correction explain the expected type. Such a write rejects the entire action batch before any tools execute and uses the existing one-artifact-correction allowance.
+
+A single enclosing Markdown code block is accepted, but the enclosed JSON must still pass the full schema. The correction request includes the rejected response and errors; it cannot bypass the one-correction, model-turn, or time limits. If required correction context cannot fit, shorten prompts or increase `context_char_budget` within the provider's capacity.
+
+Only the responsible agent displays **Failed**. Agents with pending work display **Blocked · Remaining work stopped**, including a Tester that prepared tests but could not execute them. Concurrent work stopped by the failure displays **Cancelled**, and completed work stays **Completed**. The overall run remains failed. A new run begins a fresh cycle using accepted outputs; it does not resume the failed invocation.
+
 If the provider rejects context size, lower `context_char_budget`. If responses regularly time out, adjust the explicit timeouts in the model configuration. A longer timeout does not weaken Stop's acceptance gate.
+
+## Framework-owned file errors
+
+Agents must not write or delete `handoff.json`, `handoff.md`, `dependencies.resolved.json`, or `evidence`, including descendants and case variants. Put handoff information in `finish.summary`, `finish.requirement_ids`, and `finish.known_limitations`; the framework generates the handoff files. Execution tools produce evidence that Tester reads and interprets in `test_report.md`. System Engineer writes `requirements.json`; the framework renders `requirements.md`.
+
+If a model requests a protected path, the entire action batch is rejected before any tools execute. Earlier successful turns' staged work and evidence are preserved. The model receives one correction opportunity to resend a complete batch without the forbidden operation. A second violation fails with the responsible role, tool, and filename. Open **Details** and inspect `invocation.tool_rejected` and the correction event with `kind: "tool"`; the action index is zero-based. This recovery does not apply to unsafe paths, credential-bearing artifacts, or unrelated tool failures.
+
+Check customized role prompts for instructions that ask the agent to author handoff or evidence files. The shipped prompts distinguish role-owned outputs from framework-owned files and use tool paths relative to each role's output folder. Saved prompt changes apply at the next cycle; restart the app after installing runtime-code changes. Historical failures may lack the rejected filename because older versions did not record it.
 
 ## Docker or dependency errors
 

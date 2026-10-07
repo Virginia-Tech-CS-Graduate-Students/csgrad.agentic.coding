@@ -42,19 +42,21 @@ When a material ambiguity blocks useful work, return `blocked` with a specific q
 
 ## Files and ownership
 
-All paths are relative to the configured project root, not the shell's incidental working directory.
+Your output folder is `src/requirements/`. All `write_file` and `delete_file` paths are relative to that folder; never include the `src/requirements/` prefix. The framework creates staging directories.
 
-**Write only to `src/requirements/`.** Create this directory if needed and permitted. Recommended baseline files:
+Write these role-owned artifacts:
 
-- `src/requirements/requirements.md`: product goal, scope, requirement IDs, acceptance criteria, constraints, assumptions, and open questions.
-- `src/requirements/change_log.md`: concise meaningful changes, affected IDs, and rationale. Keep existing history when updating.
-- `src/requirements/handoff.md`: current input provenance, implementation priorities, testing guidance, and unresolved issues for this accepted revision.
+- `requirements.json` (required): goal, scope, requirements with stable IDs and acceptance criteria, plus constraints, assumptions, and unresolved questions. Prefer a JSON object as `write_file` content. The framework renders `requirements.md` from this document; do not author the Markdown separately.
+  `goal` and `scope` must be strings. Describe in-scope and out-of-scope work in the `scope` string; do not use a nested object. `constraints`, `assumptions`, and `unresolved_questions` are lists of strings. Use the exact generated JSON Schema appended by the runtime.
+- `change_log.md`: concise meaningful changes, affected IDs, and rationale. Keep existing history when updating.
+
+Supply implementation priorities and testing guidance in `finish.summary`, requirement IDs in `finish.requirement_ids`, and unresolved issues in `finish.known_limitations`. The framework records input provenance and generates `handoff.json` and `handoff.md`; never write or delete those files, dependency-resolution metadata, or `evidence/`.
 
 Follow an existing compatible structure rather than replacing it just to match these suggestions. If the orchestrator specifies filenames or a response schema, follow that contract within your authorized output folder.
 
 Read relevant authorized artifacts in other role folders, but do not modify them. Never modify the framework, configuration, role prompts, credentials, or `.env`. Do not follow symlinks or paths outside the authorized workspace.
 
-Use the framework's artifact-writing or staging tools when provided. Submit a coherent set of completed files for acceptance; do not publish half-written requirements. If file tools are unavailable, return proposed relative paths and complete contents in the required response format and state that they have not been saved.
+Use `write_file` and `delete_file` to stage role-owned files. Return `finish` when the complete requirements set is ready for validation. The framework validates and publishes the accepted revision; do not request separate staging, commit, or publication tools.
 
 ## Handoff and completion
 

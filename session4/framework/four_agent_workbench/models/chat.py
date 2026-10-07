@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import codecs
 import json
+import re
 import time
 from collections.abc import Callable
 from email.utils import parsedate_to_datetime
@@ -24,6 +25,58 @@ class StreamingUnsupported(WorkbenchError):
     pass
 
 
+class JsonOutputUnsupported(WorkbenchError):
+    pass
+
+
+def _unsupported_option(data: bytes, option: str) -> bool:
+    """Recognize explicit capability rejections, never an echoed request's options."""
+    try:
+        body = json.loads(data)
+    except ValueError:
+        error = data.decode("utf-8", errors="replace")
+    else:
+        if not isinstance(body, dict):
+            return False
+        error = body.get("error", body.get("detail", ""))
+    param, code = "", ""
+    if isinstance(error, dict):
+        param = str(error.get("param") or "").lower()
+        code = str(error.get("code") or "").lower()
+        message = str(error.get("message", "")).lower()
+    elif isinstance(error, str):
+        message = error.lower()
+    else:
+        return False
+    names = (
+        ("response_format", "json_object")
+        if option == "response_format"
+        else ("stream", "streaming")
+    )
+    if param and param not in names:
+        return False
+    unsupported = (
+        r"unsupported|not supported|does not support|not support|unknown (?:parameter|field)|"
+        r"unrecognized (?:parameter|field)|not permitted|not allowed"
+    )
+    if param in names:
+        return code in {"unsupported_parameter", "unsupported_value"} or bool(
+            re.search(unsupported, message)
+        )
+    name = rf"\b(?:{'|'.join(names)})\b"
+    quote = r"['\"`]?"
+    # Require a grammatical link to this option, not just two words somewhere in a body.
+    patterns = [
+        rf"{name}{quote}\s*[:=-]?\s*(?:(?:is|are)\s+)?(?:currently\s+)?"
+        r"(?:unsupported|not supported|not permitted|not allowed)\b",
+        rf"\b(?:unsupported|unknown|unrecognized)(?:\s+(?:parameter|field|option|value|type))?"
+        rf"\s*[:=]?\s*{quote}{name}",
+        rf"\b(?:does not support|do not support|doesn't support|cannot support)\s+"
+        rf"(?:(?:the|parameter|field|option|value|type)\s+)*{quote}{name}",
+    ]
+    return any(re.search(pattern, message) for pattern in patterns)
+
+
 class ChatModel:
     """Small compatible-chat transport; no SDK retries, native tools, or tracing."""
 
@@ -34,10 +87,13 @@ class ChatModel:
         redactor: Redactor,
         semaphore: asyncio.Semaphore,
         transport: httpx.AsyncBaseTransport | None = None,
+        output_mode: Callable[[dict], None] | None = None,
     ):
         self.resolved, self.settings, self.redactor = resolved, settings, redactor
         self.semaphore = semaphore
         self.streaming = settings.streaming != "off"
+        self.json_output = settings.json_output != "off"
+        self.output_mode = output_mode
         self.client = httpx.AsyncClient(
             transport=transport,
             follow_redirects=False,
@@ -66,6 +122,11 @@ class ChatModel:
             async with self.semaphore:
                 async with asyncio.timeout(self.settings.request_timeout_seconds):
                     attempts = 0
+                    self._report_output_mode(
+                        "configured"
+                        if self.json_output or self.settings.json_output == "off"
+                        else "unsupported_response_format"
+                    )
                     while True:
                         gate.check()
                         if not self.streaming:
@@ -74,6 +135,16 @@ class ChatModel:
                             )
                         try:
                             return await self._request(messages, preview, gate)
+                        except JsonOutputUnsupported:
+                            if self.settings.json_output != "auto" or not self.json_output:
+                                raise WorkbenchError(
+                                    "Provider does not support JSON output; json_output=on requires it"
+                                )
+                            self.json_output = False
+                            self._report_output_mode("unsupported_response_format")
+                            preview(
+                                "Provider declined JSON output; retrying with text output and local validation.\n"
+                            )
                         except StreamingUnsupported:
                             if self.settings.streaming != "auto" or not self.streaming:
                                 raise WorkbenchError(
@@ -96,12 +167,24 @@ class ChatModel:
         except TimeoutError as exc:
             raise WorkbenchError("Model request exceeded its overall deadline") from exc
 
+    def _report_output_mode(self, reason: str):
+        if self.output_mode:
+            self.output_mode(
+                {
+                    "requested": self.settings.json_output,
+                    "effective": "json_object" if self.json_output else "text",
+                    "reason": reason,
+                }
+            )
+
     async def _request(self, messages, preview, gate) -> str:
         headers = {
             "Authorization": f"Bearer {self.resolved.api_key.get_secret_value()}",
             "Content-Type": "application/json",
         }
         payload = {"model": self.resolved.model, "messages": messages, "stream": self.streaming}
+        if self.json_output:
+            payload["response_format"] = {"type": "json_object"}
         output: list[str] = []
         redactor = StreamRedactor(self.redactor)
         timeout = httpx.Timeout(
@@ -119,8 +202,11 @@ class ChatModel:
                 data = await self._bounded_body(response)
                 # Inspect only to classify capability/context errors; never log provider bodies.
                 body = data.decode("utf-8", errors="replace").lower()
-                if response.status_code in {400, 422} and "stream" in body and self.streaming:
-                    raise StreamingUnsupported()
+                if response.status_code in {400, 422}:
+                    if self.json_output and _unsupported_option(data, "response_format"):
+                        raise JsonOutputUnsupported()
+                    if self.streaming and _unsupported_option(data, "stream"):
+                        raise StreamingUnsupported()
                 if response.status_code in {401, 403}:
                     raise WorkbenchError(
                         "Model authentication was rejected; check the selected role's key"

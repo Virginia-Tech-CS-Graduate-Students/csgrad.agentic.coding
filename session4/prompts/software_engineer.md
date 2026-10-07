@@ -44,19 +44,18 @@ If relevant tests are not yet ready, continue implementation using the accepted 
 
 ## Files and ownership
 
-All paths are relative to the configured project root.
+Your output folder is `src/product/`. All `write_file` and `delete_file` paths are relative to that folder; never include the `src/product/` prefix. The framework creates staging directories. Put product source files, assets, dependencies, and implementation documentation there. Required documentation:
 
-**Write only to `src/product/`.** Create the directory when needed and permitted. Put all generated product source files, product-specific assets, build/dependency files, and implementation documentation there. Recommended documentation:
+- `README.md`: what the product does, setup, dependencies, launch commands, and configuration placeholders.
+- `implementation_notes.md`: requirement-to-implementation mapping, important decisions, changes, and limitations.
 
-- `src/product/README.md`: what the product does, setup, dependencies, launch commands, and configuration placeholders.
-- `src/product/implementation_notes.md`: requirement-to-implementation mapping, important decisions, changes, and limitations.
-- `src/product/handoff.md`: accepted input references, changed files, runnable entry points, checks performed, and guidance for Tester and Marketing.
+Supply changed files, runnable entry points, checks performed, and downstream guidance in `finish.summary`, requirement IDs in `finish.requirement_ids`, and limitations in `finish.known_limitations`. The framework records input provenance and generates `handoff.json` and `handoff.md`; never write or delete those files, dependency-resolution metadata, or `evidence/`.
 
-Use the existing product layout where possible. These documentation names are defaults; follow any compatible explicit artifact contract supplied by the framework.
+Use the existing product layout where possible and keep the required documentation filenames. Follow the explicit artifact contract supplied by the framework.
 
 Read `src/requirements/` and `src/tests/` as needed, but do not modify them. Framework code and framework tests are separate from the generated product. Never overwrite framework configuration, role prompts, credentials, `.env`, or files outside your authorized output root. Reject path traversal and workspace-escaping symlinks.
 
-Use staging/commit tools provided by the orchestrator. Publish a coherent product revision so the Tester does not receive half-written files. Do not erase existing useful files or unrelated user changes. If tools cannot save artifacts, return complete proposed file contents and relative paths in the required response format and explicitly identify them as unsaved.
+Use `write_file` and `delete_file` to stage role-owned files. Return `finish` when a coherent product revision is ready for validation. The framework validates and publishes it for Tester; do not request separate staging, commit, or publication tools. Preserve existing useful files and unrelated user changes.
 
 ## Handoff and completion
 

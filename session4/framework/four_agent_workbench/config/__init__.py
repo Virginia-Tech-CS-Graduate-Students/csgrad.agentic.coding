@@ -19,6 +19,7 @@ class ModelSettings(StrictModel):
     api_key_env: str = "LLM_API_KEY"
     model_env: str = "LLM_MODEL"
     streaming: str = "auto"
+    json_output: str = "auto"
     connect_timeout_seconds: float = Field(default=10, gt=0)
     first_token_timeout_seconds: float = Field(default=60, gt=0)
     stream_idle_timeout_seconds: float = Field(default=30, gt=0)
@@ -32,6 +33,8 @@ class ModelSettings(StrictModel):
             raise ValueError("Version one requires openai_chat with endpoint_kind=full_url")
         if self.streaming not in {"auto", "on", "off"}:
             raise ValueError("streaming must be auto, on, or off")
+        if self.json_output not in {"auto", "on", "off"}:
+            raise ValueError("json_output must be auto, on, or off")
         return self
 
 

@@ -370,7 +370,13 @@ class MainWindow(QMainWindow):
             else:
                 self.graph.set_status(event.agent_id, "completed", "Accepted output")
         elif event.type in {"invocation.failed", "invocation.cancelled"}:
-            self.graph.set_status(event.agent_id, event.status, event.status.capitalize())
+            # Cleanup notifications must not erase a more specific terminal result.
+            if event.type == "invocation.failed" or self.graph.nodes[event.agent_id].status not in {
+                "failed",
+                "completed",
+                "blocked",
+            }:
+                self.graph.set_status(event.agent_id, event.status, event.status.capitalize())
             if event.payload.get("error"):
                 self.status_label.setText(event.payload["error"])
         elif event.type == "handoff.delivered":
@@ -384,9 +390,7 @@ class MainWindow(QMainWindow):
             self.graph.terminate_waiting(event.status)
         elif event.type == "run.terminated":
             if event.status != "completed":
-                self.graph.terminate_waiting(
-                    "cancelled" if event.status in {"cancelled", "cleanup_blocked"} else "failed"
-                )
+                self.graph.terminate_waiting(event.status)
             self.status_label.setText(
                 event.status.replace("_", " ").capitalize()
                 + (" · " + event.payload["error"] if event.payload.get("error") else "")

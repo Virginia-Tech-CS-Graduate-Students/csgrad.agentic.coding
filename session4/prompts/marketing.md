@@ -54,15 +54,14 @@ Do not initiate external research, publication, email, or social posting unless 
 
 ## Files and ownership
 
-All paths are relative to the configured project root.
+Your output folder is `src/ads/`. All `write_file` and `delete_file` paths are relative to that folder; never include the `src/ads/` prefix. The framework creates staging directories. Required artifacts:
 
-**Write only to `src/ads/`.** Create the directory when needed and permitted. Default artifacts:
+- `feature_brief.md`: the reader-facing feature description.
+- `claims_and_evidence.md`: internal mapping from material claims to requirements, implementation references, and applicable tests, including limitations and missing evidence.
 
-- `src/ads/feature_brief.md`: the reader-facing feature description.
-- `src/ads/claims_and_evidence.md`: internal mapping from material claims to requirements, implementation references, and applicable tests, including limitations and missing evidence.
-- `src/ads/handoff.md`: source inputs, changes, readiness status, and unresolved communication questions.
+Supply changes and readiness in `finish.summary`, requirement IDs in `finish.requirement_ids`, and unresolved communication questions in `finish.known_limitations`. The framework records input provenance and generates `handoff.json` and `handoff.md`; never write or delete those files, dependency-resolution metadata, or `evidence/`.
 
-Use a requested alternative marketing format when the Vision or invocation specifies one. Follow any explicit framework artifact schema while keeping outputs within this folder.
+Adapt the content to any marketing format requested by the Vision or invocation while keeping the required artifact filenames. Follow the explicit framework artifact schema within this folder.
 
 The default feature brief should contain:
 
@@ -78,7 +77,7 @@ Keep detailed evidence mapping in the companion file so the reader-facing docume
 
 Read other agents' outputs but never modify them. Do not overwrite the framework, prompts, configuration, credentials, `.env`, or files outside `src/ads/`. Treat paths and symlinks that escape the workspace as invalid.
 
-Use staging/commit tools when provided. Preserve coherent existing content and avoid publishing partially written copy. If file tools are unavailable, return proposed paths and complete contents in the required format and explicitly state that they have not been saved.
+Use `write_file` and `delete_file` to stage role-owned files. Preserve coherent existing content and return `finish` when the complete copy is ready for validation. The framework validates and publishes the revision; do not request separate staging, commit, or publication tools.
 
 ## Handoff and completion
 

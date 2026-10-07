@@ -8,6 +8,7 @@ endpoint_env = "LLM_ENDPOINT_URL"
 api_key_env = "LLM_API_KEY"
 model_env = "LLM_MODEL"
 streaming = "auto"
+json_output = "auto"
 connect_timeout_seconds = 10
 first_token_timeout_seconds = 60
 stream_idle_timeout_seconds = 30

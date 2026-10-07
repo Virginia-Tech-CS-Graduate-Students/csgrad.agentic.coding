@@ -100,9 +100,33 @@ class Redactor:
         return any(s in text for s in self.secrets)
 
     def text(self, text: str) -> str:
+        return self.text_with_position(text, 0)[0]
+
+    def text_with_position(self, text: str, position: int) -> tuple[str, int]:
+        """Redact complete matches and map a character offset into the safe text.
+
+        An offset inside a replaced match maps to the replacement's start.
+        """
+
+        def replace(pattern, replacement):
+            nonlocal text, position
+            original_position = position
+
+            def matched(match):
+                nonlocal position
+                value = replacement(match)
+                if match.end() <= original_position:
+                    position += len(value) - (match.end() - match.start())
+                elif match.start() <= original_position:
+                    position += match.start() - original_position
+                return value
+
+            text = re.sub(pattern, matched, text)
+
         for secret in self.secrets:
-            text = text.replace(secret, "[REDACTED]")
-        return re.sub(r"(?i)(Bearer\s+)[^\s\"']+", r"\1[REDACTED]", text)
+            replace(re.escape(secret), lambda _: "[REDACTED]")
+        replace(r"(?i)(Bearer\s+)[^\s\"']+", lambda match: match[1] + "[REDACTED]")
+        return text, position
 
     def clean(self, value: Any) -> Any:
         if isinstance(value, str):

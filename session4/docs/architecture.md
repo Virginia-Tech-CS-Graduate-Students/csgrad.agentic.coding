@@ -40,9 +40,13 @@ Pydantic models in `domain.py` validate artifact references, manifests, requirem
 
 An invocation receives its identity, activity, master/role prompt snapshots, pinned input aliases, owned baseline, output contract and tool limits. Context includes bounded manifests and excerpts, with scoped range reads for additional content. Full tool history is not accumulated forever.
 
-Live models return `{"actions": [...], "finish": ...}` as JSON text. Native provider tools and structured-output support are unnecessary. Partial streamed JSON is never executed. One schema correction is allowed within the invocation's total turn budget.
+Live models return `{"actions": [...], "finish": ...}` as JSON text, optionally inside one enclosing Markdown code block. The adapter requests JSON-object output by default; explicit unsupported-option errors permit a visible, durable fallback in automatic mode. Native provider tools and schema enforcement are unnecessary. Model context includes generated Pydantic JSON Schemas for the envelope and, when relevant, requirements content. The complete response must validate before any actions execute. One response correction is allowed within the invocation's total turn budget. Its rejected assistant response and validation errors form an indivisible, required context group; older history can be omitted to fit the budget. Rejections produce bounded, redacted diagnostic events without retaining full raw responses or provider reasoning. Syntax diagnostics center on the normalized JSON error position, with offsets mapped through redaction before cropping.
 
 Tools are `list_artifacts`, `read_file`, `write_file`, `delete_file`, `install_dependencies`, `run_check`, and `run_pytest`. Each is explicitly permissioned by activity. There is no host shell or self-scheduling tool. The framework writes authoritative handoff and execution-evidence files.
+
+All proposed write/delete paths are checked before a response's actions execute. A request targeting a framework-owned top-level path rejects the entire batch, records a redacted `invocation.tool_rejected` event, and permits one tool correction within existing turn/time limits. This allowance is independent of response and artifact corrections. Rejection leaves earlier staged files and evidence unchanged; a repeated protected-path request fails without publication. Path-safety and credential violations remain terminal failures.
+
+Requirements-producing invocations also validate every proposed `requirements.json` write before executing any batch actions. Invalid content records filename/field diagnostics in `invocation.artifact_rejected` and rejects the whole batch without altering earlier staged work. This uses the same artifact-correction allowance as final contract validation. Required files and stable requirement IDs are still checked at finish.
 
 ## Publication and recovery
 

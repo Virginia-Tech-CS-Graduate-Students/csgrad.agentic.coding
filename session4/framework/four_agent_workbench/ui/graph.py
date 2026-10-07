@@ -21,6 +21,7 @@ STATE_COLORS = {
     "running": "#147a73",
     "completed": "#217248",
     "failed": "#b84141",
+    "blocked": "#967033",
     "cancelled": "#967033",
 }
 ACTIVITIES = {
@@ -249,8 +250,14 @@ class WorkflowGraph(QGraphicsView):
                 self.set_status(role, "cancelled", "Cancelled")
 
     def terminate_waiting(self, status):
+        if status == "completed":
+            return
         for role, node in self.nodes.items():
-            if node.status in {"running", "waiting"}:
-                self.set_status(
-                    role, "cancelled" if status == "cancelled" else "failed", status.capitalize()
-                )
+            if node.status not in {"running", "waiting"}:
+                continue
+            if status in {"cancelled", "cleanup_blocked"}:
+                self.set_status(role, "cancelled", "Cancelled")
+            elif node.status == "waiting":
+                self.set_status(role, "blocked", "Remaining work stopped")
+            else:
+                self.set_status(role, "cancelled", "Stopped after run failure")
